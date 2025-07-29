@@ -241,13 +241,7 @@ import {
   User,
   Box,
 } from 'lucide-react';
-import {
-  MapContainer,
-  TileLayer,
-  Polyline,
-  Marker,
-  Popup,
-} from 'react-leaflet';
+
 import 'leaflet/dist/leaflet.css';
 
 const TrackingResult = () => {
