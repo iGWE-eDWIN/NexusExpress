@@ -159,8 +159,8 @@ const Chat = ({
               onClick={() => {
                 if (username.trim()) {
                   setShowUsernameModal(false);
-                  SocketService.disconnect();
-                  SocketService.connect();
+                  // SocketService.disconnect();
+                  // SocketService.connect();
                 }
               }}
               className='bg-gray-500 text-white px-3 py-1 rounded w-full'

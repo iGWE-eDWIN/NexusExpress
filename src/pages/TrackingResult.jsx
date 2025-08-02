@@ -250,7 +250,7 @@ const TrackingResult = () => {
   const [shipment, setShipment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [coordinates, setCoordinates] = useState([]);
+  // const [coordinates, setCoordinates] = useState([]);
 
   useEffect(() => {
     const loadShipment = async () => {
@@ -274,37 +274,37 @@ const TrackingResult = () => {
     loadShipment();
   }, [trackingNumber, getShipmentByTracking]);
 
-  useEffect(() => {
-    const fetchCoordinates = async () => {
-      if (!shipment || !Array.isArray(shipment.trackingHistory)) return;
-      const locationStrings = shipment.trackingHistory.map((e) => {
-        return `${e.location?.city || ''}, ${e.location?.country || ''}`;
-      });
+  // useEffect(() => {
+  //   const fetchCoordinates = async () => {
+  //     if (!shipment || !Array.isArray(shipment.trackingHistory)) return;
+  //     const locationStrings = shipment.trackingHistory.map((e) => {
+  //       return `${e.location?.city || ''}, ${e.location?.country || ''}`;
+  //     });
 
-      const results = await Promise.all(
-        locationStrings.map(async (locStr) => {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-                locStr
-              )}`
-            );
-            const data = await res.json();
-            if (data?.[0]) {
-              return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-            }
-          } catch (error) {
-            console.error('Error fetching coordinates:', error);
-            return null;
-          }
-          return null;
-        })
-      );
-      setCoordinates(results.filter(Boolean));
-    };
+  //     const results = await Promise.all(
+  //       locationStrings.map(async (locStr) => {
+  //         try {
+  //           const res = await fetch(
+  //             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+  //               locStr
+  //             )}`
+  //           );
+  //           const data = await res.json();
+  //           if (data?.[0]) {
+  //             return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  //           }
+  //         } catch (error) {
+  //           console.error('Error fetching coordinates:', error);
+  //           return null;
+  //         }
+  //         return null;
+  //       })
+  //     );
+  //     setCoordinates(results.filter(Boolean));
+  //   };
 
-    fetchCoordinates();
-  }, [shipment]);
+  //   fetchCoordinates();
+  // }, [shipment]);
 
   // const formatWeight = (weight) => {
   //   if (!weight) return 'Not specified';
@@ -702,15 +702,16 @@ const TrackingResult = () => {
             <div>
               <h4 className='text-white font-semibold mb-4'>Contact</h4>
               <address className='not-italic'>
-                <p className='mb-2'>123 Shipping Lane</p>
-                <p className='mb-2'>Logistics City, LC 12345</p>
+                <p className='mb-2'>Wilbur Wright Dr</p>
+                <p className='mb-2'>Barksdale Afb, LA 71110</p>
+                <p className='mb-2'>United States</p>
                 <p className='mb-2'>Email: support@nexusexpress.com</p>
                 <p>Phone: +1 (440) 281‑7685</p>
               </address>
             </div>
           </div>
           <div className='pt-8 border-t border-gray-800 text-center text-sm'>
-            © {new Date().getFullYear()} Nexus Express. All rights reserved. |
+            © 2020 Nexus Express. All rights reserved. |
             <a href='#privacy' className='hover:text-white ml-2'>
               Privacy Policy
             </a>{' '}

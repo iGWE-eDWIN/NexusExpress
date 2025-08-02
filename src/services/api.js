@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = 'https://nexusserver-laum.onrender.com';
+// const API_BASE_URL = ' http://localhost:3000';
 
 // Create axios instance
 const api = axios.create({

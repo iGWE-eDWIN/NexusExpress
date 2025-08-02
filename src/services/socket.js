@@ -6,34 +6,78 @@ class SocketService {
     this.isManuallyDisconnected = false;
   }
 
-  connect(serverUrl = 'http://localhost:3000', onConnected = null) {
-    if (!this.socket || this.isManuallyDisconnected) {
-      this.socket = io(serverUrl, {
-        withCredentials: true,
-        autoConnect: true,
-        transports: ['websocket'],
-      });
+  connect(
+    serverUrl = 'https://nexusserver-laum.onrender.com',
+    onConnected = null
+  ) {
+    // if (!this.socket || this.isManuallyDisconnected) {
+    //   this.socket = io(serverUrl, {
+    //     withCredentials: true,
+    //     autoConnect: true,
+    //     transports: ['websocket'],
+    //   });
 
-      this.isManuallyDisconnected = false;
+    //   this.isManuallyDisconnected = false;
 
-      this.socket.on('connect', () => {
-        this.isConnected = true;
-        console.log('✅ Socket connected:', this.socket.id);
-        if (onConnected) onConnected();
-      });
+    //   this.socket.on('connect', () => {
+    //     this.isConnected = true;
+    //     console.log('✅ Socket connected:', this.socket.id);
+    //     if (onConnected) onConnected();
+    //   });
 
-      this.socket.on('disconnect', (reason) => {
-        console.warn('❌ Socket disconnected:', reason);
-        if (!this.isManuallyDisconnected && reason !== 'io client disconnect') {
-          console.log('🔁 Reconnecting...');
-          setTimeout(() => this.connect(serverUrl), 3000);
-        }
-      });
+    //   this.socket.on('disconnect', (reason) => {
+    //     console.warn('❌ Socket disconnected:', reason);
+    //     if (!this.isManuallyDisconnected && reason !== 'io client disconnect') {
+    //       console.log('🔁 Reconnecting...');
+    //       setTimeout(() => this.connect(serverUrl), 3000);
+    //     }
+    //   });
 
-      this.socket.on('connect_error', (err) => {
-        console.error('⚠️ Socket error:', err.message);
-      });
+    //   this.socket.on('connect_error', (err) => {
+    //     console.error('⚠️ Socket error:', err.message);
+    //   });
+    // }
+
+    // 🛡️ Prevent reconnection if already connected
+    if (this.socket?.connected) {
+      console.log('ℹ️ Socket already connected:', this.socket.id);
+      if (onConnected) onConnected();
+      return;
     }
+
+    // 🔁 If socket exists but is not connected (e.g., reconnecting), do nothing
+    if (this.socket && !this.isManuallyDisconnected) {
+      // console.log('⏳ Socket is reconnecting...');
+      return;
+    }
+
+    // ✅ Setup a new connection
+    this.socket = io(serverUrl, {
+      withCredentials: true,
+      autoConnect: true,
+      transports: ['websocket'],
+    });
+
+    this.isManuallyDisconnected = false;
+
+    this.socket.on('connect', () => {
+      this.isConnected = true;
+      // console.log('✅ Socket connected:', this.socket.id);
+      if (onConnected) onConnected();
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      this.isConnected = false;
+      console.warn('❌ Socket disconnected:', reason);
+      if (!this.isManuallyDisconnected && reason !== 'io client disconnect') {
+        // console.log('🔁 Reconnecting...');
+        setTimeout(() => this.connect(serverUrl, onConnected), 3000);
+      }
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.error('⚠️ Socket error:', err.message);
+    });
   }
 
   disconnect() {
@@ -41,7 +85,7 @@ class SocketService {
       this.isManuallyDisconnected = true;
       this.socket.disconnect();
       this.socket = null;
-      console.log('🛑 Socket manually disconnected');
+      // console.log('🛑 Socket manually disconnected');
     }
   }
 

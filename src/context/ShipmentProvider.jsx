@@ -91,43 +91,82 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
   }, []);
 
   // Initialize socket connection and listeners
+  // useEffect(() => {
+  //   SocketService.connect();
+
+  //   if (isAdmin) {
+  //     SocketService.emit('join-admin');
+  //   } else {
+  //     SocketService.emit('join-general');
+  //   }
+
+  //   SocketService.onNewMessage(handleNewMessage);
+  //   SocketService.on('tracking-updated', handleTrackingUpdate);
+
+  //   // For admin: listen for new chat connections
+  //   if (isAdmin) {
+  //     SocketService.on('new-chat-started', (chatInfo) => {
+  //       dispatch({
+  //         type: 'ADD_ACTIVE_CHAT',
+  //         payload: {
+  //           id: chatInfo.room,
+  //           name:
+  //             chatInfo.username || chatInfo.trackingNumber || 'General Chat',
+  //           isGeneral: chatInfo.isGeneral,
+  //           unread: true,
+  //         },
+  //       });
+  //     });
+  //   }
+
+  //   return () => {
+  //     // SocketService.offMessageReceived();
+  //     // SocketService.offTrackingUpdated();
+  //     SocketService.offNewMessage(handleNewMessage);
+  //     SocketService.off('tracking-updated', handleTrackingUpdate);
+  //     if (isAdmin) {
+  //       SocketService.off('new-chat-started');
+  //     }
+  //     SocketService.disconnect();
+  //   };
+  // }, [isAdmin, handleNewMessage, handleTrackingUpdate]);
+
   useEffect(() => {
-    SocketService.connect();
+    SocketService.connect(undefined, () => {
+      // ✅ Only emit after successful socket connection
+      if (isAdmin) {
+        SocketService.emit('join-admin');
+      } else {
+        SocketService.emit('join-general');
+      }
 
-    if (isAdmin) {
-      SocketService.emit('join-admin');
-    } else {
-      SocketService.emit('join-general');
-    }
+      // Setup listeners inside here to ensure socket is live
+      SocketService.onNewMessage(handleNewMessage);
+      SocketService.on('tracking-updated', handleTrackingUpdate);
 
-    SocketService.onNewMessage(handleNewMessage);
-    SocketService.on('tracking-updated', handleTrackingUpdate);
-
-    // For admin: listen for new chat connections
-    if (isAdmin) {
-      SocketService.on('new-chat-started', (chatInfo) => {
-        dispatch({
-          type: 'ADD_ACTIVE_CHAT',
-          payload: {
-            id: chatInfo.room,
-            name:
-              chatInfo.username || chatInfo.trackingNumber || 'General Chat',
-            isGeneral: chatInfo.isGeneral,
-            unread: true,
-          },
+      if (isAdmin) {
+        SocketService.on('new-chat-started', (chatInfo) => {
+          dispatch({
+            type: 'ADD_ACTIVE_CHAT',
+            payload: {
+              id: chatInfo.room,
+              name:
+                chatInfo.username || chatInfo.trackingNumber || 'General Chat',
+              isGeneral: chatInfo.isGeneral,
+              unread: true,
+            },
+          });
         });
-      });
-    }
+      }
+    });
 
     return () => {
-      // SocketService.offMessageReceived();
-      // SocketService.offTrackingUpdated();
       SocketService.offNewMessage(handleNewMessage);
       SocketService.off('tracking-updated', handleTrackingUpdate);
       if (isAdmin) {
         SocketService.off('new-chat-started');
       }
-      SocketService.disconnect();
+      // SocketService.disconnect();
     };
   }, [isAdmin, handleNewMessage, handleTrackingUpdate]);
 
@@ -254,7 +293,7 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
     identifier,
     isGeneral = false
   ) => {
-    console.log('Sending chat message:', messageData);
+    // console.log('Sending chat message:', messageData);
     try {
       const room = isGeneral
         ? `general-${identifier}`

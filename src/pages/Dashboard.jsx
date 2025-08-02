@@ -32,11 +32,20 @@ const AdminDashboard = () => {
 
   // console.log(chatMessages);
 
+  // useEffect(() => {
+  //   getAllChats();
+  //   setMessages(Array.isArray(chatMessages) ? chatMessages : []);
+  //   loadShipments();
+  // }, []);
+
   useEffect(() => {
     getAllChats();
-    setMessages(Array.isArray(chatMessages) ? chatMessages : []);
     loadShipments();
   }, []);
+
+  useEffect(() => {
+    setMessages(Array.isArray(chatMessages) ? chatMessages : []);
+  }, [chatMessages]);
 
   const filteredShipments = shipments.filter((shipment) => {
     const matchesSearch =

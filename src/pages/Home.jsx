@@ -327,8 +327,9 @@ const Home = () => {
               <div>
                 <h4 className='text-white font-semibold mb-4'>Contact</h4>
                 <address className='not-italic'>
-                  <p className='mb-2'>123 Shipping Lane</p>
-                  <p className='mb-2'>Logistics City, LC 12345</p>
+                  <p className='mb-2'>Wilbur Wright Dr</p>
+                  <p className='mb-2'>Barksdale Afb, LA 71110</p>
+                  <p className='mb-2'>United States</p>
                   <p className='mb-2'>Email: support@nexusexpress.com</p>
                   <p>Phone: +1 (440) 281‑7685</p>
                 </address>
