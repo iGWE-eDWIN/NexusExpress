@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = 'https://nexusserver-laum.onrender.com';
-// const API_BASE_URL = ' http://localhost:3000';
+// const API_BASE_URL = 'http://localhost:3000';
 
 // Create axios instance
 const api = axios.create({
@@ -46,7 +46,7 @@ export const shipmentsAPI = {
     api.get(`/shipments/track/${trackingNumber}`),
   create: (shipmentData) => api.post('/shipments/create', shipmentData),
   update: (id, updates) => api.put(`/shipments/update/${id}`, updates),
-  delete: (id) => api.delete(`/shipments/delete/${id}`),
+  delete: (trackingNumber) => api.delete(`/shipments/delete/${trackingNumber}`),
 };
 
 // Chat API
@@ -56,6 +56,9 @@ export const chatAPI = {
   getChat: (chatId) => api.get(`/chats/${chatId}`),
 
   getAllChats: () => api.get('/chats'),
+
+  // 💥 New delete method
+  deleteMessage: (messageId) => api.delete(`/chats/${messageId}`),
 
   // Optional fallback for sending message
   sendMessage: (messageData) => api.post(`/chats/tracking`, messageData),

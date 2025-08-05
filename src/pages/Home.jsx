@@ -331,7 +331,7 @@ const Home = () => {
                   <p className='mb-2'>Barksdale Afb, LA 71110</p>
                   <p className='mb-2'>United States</p>
                   <p className='mb-2'>Email: support@nexusexpress.com</p>
-                  <p>Phone: +1 (440) 281‑7685</p>
+                  <p>Phone: +1 (903) 332‑5299</p>
                 </address>
               </div>
             </div>

@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials);
-      // console.log('Login response:', response);
+      console.log('Login response:', response);
       if (!response.data || !response.data.token) {
         throw new Error('Invalid login response');
       }

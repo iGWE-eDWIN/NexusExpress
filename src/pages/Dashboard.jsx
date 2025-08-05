@@ -1,7 +1,4 @@
-// AIzaSyD7bDih_modT0qgpL23h-rj5G6cN_80AHE   APIKEY
-
 import { useState, useEffect } from 'react';
-
 import {
   Package,
   Clock,
@@ -9,9 +6,12 @@ import {
   Filter,
   Edit3,
   MessageCircle,
+  Users,
+  Trash2,
 } from 'lucide-react';
 import { useShipment } from '../context/hooks/useShipment';
-// import { useAuth } from '../context/hooks/useAuth';
+import AdminChat from '../components/AdminChat';
+import SocketService from '../services/socket';
 
 const AdminDashboard = () => {
   const {
@@ -20,28 +20,103 @@ const AdminDashboard = () => {
     getAllChats,
     chatMessages,
     shipments,
+    deleteMessage,
+    deleteShipment,
   } = useShipment();
 
-  // console.log(shipments);
-  // const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('shipments');
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [messages, setMessages] = useState([]);
+  const [showAdminChat, setShowAdminChat] = useState(false);
+  const [activeChats, setActiveChats] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // console.log(chatMessages);
-
-  // useEffect(() => {
-  //   getAllChats();
-  //   setMessages(Array.isArray(chatMessages) ? chatMessages : []);
-  //   loadShipments();
-  // }, []);
+  const adminId = 'admin-001'; // You can get this from your auth context
+  const adminName = 'Support Admin'; // You can get this from your auth context
 
   useEffect(() => {
     getAllChats();
     loadShipments();
+
+    // Initialize socket connection for admin
+    SocketService.connect(undefined, () => {
+      SocketService.joinAdminRoom(adminId);
+    });
+
+    // Listen for new user messages
+    const handleUserMessage = (message) => {
+      setUnreadCount((prev) => prev + 1);
+
+      // Add to active chats if not already there
+      setActiveChats((prev) => {
+        const existingChat = prev.find(
+          (chat) => chat.name === message.username
+        );
+        if (existingChat) {
+          return prev.map((chat) =>
+            chat.name === message.username
+              ? {
+                  ...chat,
+                  lastMessage: message.message,
+                  timestamp: message.timestamp,
+                  unread: true,
+                }
+              : chat
+          );
+        } else {
+          return [
+            ...prev,
+            {
+              id: message.username,
+              name: message.username,
+              lastMessage: message.message,
+              timestamp: message.timestamp,
+              unread: true,
+            },
+          ];
+        }
+      });
+    };
+
+    // Listen for new chat connections
+    const handleNewChat = ({ username, timestamp }) => {
+      setActiveChats((prev) => {
+        const exists = prev.find((chat) => chat.name === username);
+        if (!exists) {
+          return [
+            ...prev,
+            {
+              id: username,
+              name: username,
+              lastMessage: 'User connected',
+              timestamp,
+              unread: false,
+            },
+          ];
+        }
+        return prev;
+      });
+    };
+
+    SocketService.onUserMessage(handleUserMessage);
+    SocketService.onNewChatNotification(handleNewChat);
+
+    return () => {
+      SocketService.offUserMessage(handleUserMessage);
+      SocketService.offNewChatNotification(handleNewChat);
+    };
   }, []);
+
+  const handleDeleteShipment = async (id) => {
+    await deleteShipment(id);
+  };
+
+  const handleDeleteMessage = (messageId) => {
+    // console.log(messageId);
+    deleteMessage(messageId);
+  };
 
   useEffect(() => {
     setMessages(Array.isArray(chatMessages) ? chatMessages : []);
@@ -74,14 +149,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleChatOpen = () => {
+    setShowAdminChat(true);
+    setUnreadCount(0); // Reset unread count when opening chat
+  };
+
   return (
     <div className='max-w-7xl mx-auto'>
       <div className='bg-white rounded-lg shadow-md'>
         <div className='border-b px-6 py-4'>
-          <h1 className='text-2xl font-bold text-gray-900'>Admin Dashboard</h1>
-          <p className='text-gray-600'>
-            Manage shipments and view customer messages
-          </p>
+          <div className='flex justify-between items-center'>
+            <div>
+              <h1 className='text-2xl font-bold text-gray-900'>
+                Admin Dashboard
+              </h1>
+              <p className='text-gray-600'>
+                Manage shipments and view customer messages
+              </p>
+            </div>
+
+            {/* Live Chat Button */}
+            <button
+              onClick={handleChatOpen}
+              className='relative bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center space-x-2'
+            >
+              <Users size={20} />
+              <span>Live Chat</span>
+              {unreadCount > 0 && (
+                <span className='absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center'>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className='border-b px-6'>
@@ -98,6 +198,12 @@ const AdminDashboard = () => {
                 label: 'Messages',
                 icon: MessageCircle,
                 count: Array.isArray(messages) ? messages.length : 0,
+              },
+              {
+                id: 'chats',
+                label: 'Active Chats',
+                icon: Users,
+                count: activeChats.length,
               },
               {
                 id: 'analytics',
@@ -229,7 +335,6 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className='p-3 text-sm'>
-                          {/* {shipment.currentLocation} */}
                           {shipment.currentLocation?.city},{' '}
                           {shipment.currentLocation?.country}
                         </td>
@@ -240,6 +345,15 @@ const AdminDashboard = () => {
                           >
                             <Edit3 className='w-4 h-4' />
                             <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteShipment(shipment.trackingNumber)
+                            }
+                            className='text-red-600 hover:text-red-800 flex items-center space-x-1'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                            <span>Delete</span>
                           </button>
                         </td>
                       </tr>
@@ -252,13 +366,22 @@ const AdminDashboard = () => {
 
           {activeTab === 'messages' && (
             <div>
-              <h2 className='text-lg font-semibold mb-4'>Customer Messages</h2>
+              <h2 className='text-lg font-semibold mb-4'>
+                All Customer Messages
+              </h2>
               <div className='space-y-4'>
                 {messages.map((msg) => (
                   <div
                     key={msg.id || msg._id}
-                    className='bg-gray-50 border border-gray-200 rounded-lg p-4'
+                    className='bg-gray-50 border border-gray-200 rounded-lg p-4 relative'
                   >
+                    <button
+                      onClick={() => handleDeleteMessage(msg._id)}
+                      className='absolute top-2 right-2 text-red-600 hover:text-red-800'
+                      title='Delete message'
+                    >
+                      <Trash2 className='w-4 h-4' />
+                    </button>
                     <div className='font-medium text-gray-900'>
                       {msg.sender}
                     </div>
@@ -272,6 +395,59 @@ const AdminDashboard = () => {
                 ))}
                 {messages.length === 0 && (
                   <p className='text-gray-500 text-center py-8'>No messages</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'chats' && (
+            <div>
+              <div className='flex justify-between items-center mb-4'>
+                <h2 className='text-lg font-semibold'>Active User Chats</h2>
+                <button
+                  onClick={handleChatOpen}
+                  className='bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600'
+                >
+                  Open Chat Interface
+                </button>
+              </div>
+
+              <div className='space-y-4'>
+                {activeChats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`border rounded-lg p-4 ${
+                      chat.unread ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className='flex justify-between items-start'>
+                      <div>
+                        <div className='font-medium text-gray-900 flex items-center space-x-2'>
+                          <span>{chat.name}</span>
+                          {chat.unread && (
+                            <span className='w-2 h-2 bg-blue-500 rounded-full'></span>
+                          )}
+                        </div>
+                        <div className='text-sm text-gray-700 mt-1'>
+                          {chat.lastMessage}
+                        </div>
+                        <div className='text-xs text-gray-500 mt-2'>
+                          {new Date(chat.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleChatOpen}
+                        className='text-blue-600 hover:text-blue-800 text-sm'
+                      >
+                        Reply
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {activeChats.length === 0 && (
+                  <p className='text-gray-500 text-center py-8'>
+                    No active chats
+                  </p>
                 )}
               </div>
             </div>
@@ -300,9 +476,9 @@ const AdminDashboard = () => {
                   </p>
                 </div>
                 <div className='bg-red-50 p-4 rounded-lg'>
-                  <h3 className='font-medium text-red-900'>Delayed</h3>
+                  <h3 className='font-medium text-red-900'>Active Chats</h3>
                   <p className='text-2xl font-bold text-red-600'>
-                    {shipments.filter((s) => s.status === 'delayed').length}
+                    {activeChats.length}
                   </p>
                 </div>
               </div>
@@ -310,6 +486,15 @@ const AdminDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Admin Chat Modal */}
+      <AdminChat
+        isOpen={showAdminChat}
+        onClose={() => setShowAdminChat(false)}
+        activeChats={activeChats}
+        adminId={adminId}
+        adminName={adminName}
+      />
 
       {selectedShipment && (
         <EditShipmentModal

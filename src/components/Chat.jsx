@@ -6,7 +6,6 @@ import { useShipment } from '../context/hooks/useShipment';
 import { useAuth } from '../context/hooks/useAuth';
 
 // Chat component for customer support and admin interactions
-// Handles message sending, emoji selection, and chat history retrieval
 const Chat = ({
   isOpen,
   onClose,
@@ -25,13 +24,13 @@ const Chat = ({
 
   const { sendChatMessage } = useShipment();
   const { user } = useAuth();
-  // Use props for admin detection, fallback to context if not provided
+
   const isAdminUser = isAdmin || user?.role === 'admin';
   const effectiveAdminName =
     adminName || (isAdminUser ? user?.username || user?.name || 'Admin' : null);
   const effectiveAdminId = adminId || (isAdminUser ? user?.id : null);
   const isGeneral = !isAdminUser;
-  const room = isAdminUser ? 'admin-room' : `general-${username}`;
+  const room = isAdminUser ? 'admin-room' : `user-${username}`;
 
   const scrollToBottom = useCallback(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,9 +44,6 @@ const Chat = ({
       setShowUsernameModal(true);
       return;
     }
-
-    // Use adminName prop if admin, else username
-    // const sender = isAdminUser ? effectiveAdminName : username;
 
     const msgData = {
       sender: isAdminUser ? effectiveAdminName : username,
@@ -93,34 +89,50 @@ const Chat = ({
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!isOpen || (isGeneral && !username)) return;
+    if (!isOpen) return;
 
     SocketService.connect();
-    SocketService.emit('join-room', room);
 
-    const handleIncoming = (newMsg) => {
+    // Setup based on user type
+    if (isAdminUser) {
+      SocketService.joinAdminRoom(effectiveAdminId);
+    }
+    // else if (username) {
+    //   SocketService.joinGeneralRoom(username);
+    // }
+
+    const handleIncomingMessage = (newMsg) => {
       setChatMessages((prev) => [...prev, newMsg]);
       scrollToBottom();
     };
 
-    const handleHistory = (history) => {
-      if (Array.isArray(history)) {
-        setChatMessages(history);
-        scrollToBottom();
-      }
+    const handleAdminMessage = (adminMsg) => {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: adminMsg.sender,
+          message: adminMsg.message,
+          timestamp: adminMsg.timestamp,
+          isAdmin: true,
+          content: adminMsg.message,
+        },
+      ]);
+      scrollToBottom();
     };
 
-    SocketService.onNewMessage(handleIncoming);
+    // Listen for messages
+    SocketService.onNewMessage(handleIncomingMessage);
     if (!isAdminUser) {
-      SocketService.on('chat-history', handleHistory);
+      SocketService.onAdminMessage(handleAdminMessage);
     }
 
     return () => {
-      SocketService.emit('leave-room', room);
-      SocketService.offNewMessage();
-      if (!isAdminUser) SocketService.off('chat-history');
+      SocketService.offNewMessage(handleIncomingMessage);
+      if (!isAdminUser) {
+        SocketService.offAdminMessage(handleAdminMessage);
+      }
     };
-  }, [isOpen, username, isGeneral, isAdminUser, room, scrollToBottom]);
+  }, [isOpen, username, isAdminUser, effectiveAdminId, scrollToBottom]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -134,15 +146,17 @@ const Chat = ({
   return (
     <div
       ref={chatContainerRef}
-      className={`fixed bottom-4 right-4 w-[350px] sm:w-[400px] h-[500px] bg-white rounded-xl  shadow-lg border flex flex-col z-50 ${
+      className={`fixed bottom-4 right-4 w-[350px] sm:w-[400px] h-[500px] bg-white rounded-xl shadow-lg border flex flex-col z-50 ${
         isAdmin ? 'border-blue-500' : ''
       }`}
     >
       {/* Username Modal */}
-      {showUsernameModal && (
+      {showUsernameModal && !isAdminUser && (
         <div className='absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white p-4 rounded-lg w-80'>
-            <h3 className='font-semibold mb-2'>Enter your name to start</h3>
+            <h3 className='font-semibold mb-2'>
+              Enter your name to start chatting
+            </h3>
             <input
               type='text'
               value={username}
@@ -159,14 +173,13 @@ const Chat = ({
               onClick={() => {
                 if (username.trim()) {
                   setShowUsernameModal(false);
-                  // SocketService.disconnect();
-                  // SocketService.connect();
+                  SocketService.joinGeneralRoom(username);
                 }
               }}
-              className='bg-gray-500 text-white px-3 py-1 rounded w-full'
+              className='bg-blue-500 text-white px-3 py-1 rounded w-full hover:bg-blue-600'
               disabled={!username.trim()}
             >
-              Continue
+              Start Chat
             </button>
           </div>
         </div>
@@ -175,7 +188,7 @@ const Chat = ({
       {/* Header */}
       <div className='flex items-center justify-between p-3 border-b bg-white'>
         <span className='font-semibold'>
-          {isAdmin ? 'Admin Support' : 'Customer Support Chat'}
+          {isAdminUser ? 'Admin Support' : 'Customer Support Chat'}
         </span>
         <button
           onClick={onClose}
@@ -191,24 +204,23 @@ const Chat = ({
           <div
             key={`${msg.timestamp}-${i}`}
             className={`flex flex-col ${
-              msg.isAdmin
-                ? 'items-end'
-                : msg.sender.includes('User')
-                ? 'items-start'
-                : 'items-end'
+              msg.isAdmin ? 'items-end' : 'items-start'
             }`}
           >
             <div
               className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
                 msg.isAdmin
-                  ? 'bg-green-100 text-gray-800 border-l-4 border-green-500'
-                  : msg.sender.includes('User')
-                  ? 'bg-gray-100 text-gray-800'
-                  : 'bg-gray-500 text-white'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-800'
               }`}
             >
-              <span className='font-semibold'>{msg.sender}</span>: {msg.content}
-              <div className='text-xs text-white text-right mt-1'>
+              <div className='font-semibold text-xs mb-1'>{msg.sender}</div>
+              <div>{msg.content || msg.message}</div>
+              <div
+                className={`text-xs mt-1 ${
+                  msg.isAdmin ? 'text-blue-100' : 'text-gray-500'
+                }`}
+              >
                 {new Date(msg.timestamp).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -243,20 +255,24 @@ const Chat = ({
         </button>
         <textarea
           rows={1}
-          placeholder='Type your message...'
+          placeholder={
+            isGeneral && !username
+              ? 'Enter your name first...'
+              : 'Type your message...'
+          }
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          className='flex-1 resize-none border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-500'
+          className='flex-1 resize-none border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100'
         />
         <button
           onClick={handleSendMessage}
           disabled={!message.trim()}
           className={`${
-            isAdmin
-              ? 'bg-green-500 hover:bg-green-600'
+            isAdminUser
+              ? 'bg-blue-500 hover:bg-blue-600'
               : 'bg-gray-800 hover:bg-gray-700'
-          } text-white px-3 py-1 rounded-md text-sm disabled:opacity-50`}
+          } text-white px-3 py-1 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           Send
         </button>

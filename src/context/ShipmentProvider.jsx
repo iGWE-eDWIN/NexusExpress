@@ -26,6 +26,13 @@ const shipmentReducer = (state, action) => {
           shipment._id === action.payload._id ? action.payload : shipment
         ),
       };
+    case 'DELETE_SHIPMENT':
+      return {
+        ...state,
+        shipments: state.shipments.filter(
+          (s) => s.trackingNumber !== action.payload
+        ),
+      };
     case 'SET_CHAT_MESSAGES':
       return {
         ...state,
@@ -35,6 +42,13 @@ const shipmentReducer = (state, action) => {
       return {
         ...state,
         chatMessages: [...state.chatMessages, action.payload],
+      };
+    case 'DELETE_MESSAGE':
+      return {
+        ...state,
+        chatMessages: state.chatMessages.filter(
+          (m) => m._id !== action.payload
+        ),
       };
     case 'ADD_ACTIVE_CHAT':
       return {
@@ -89,47 +103,6 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
   const handleTrackingUpdate = useCallback((update) => {
     dispatch({ type: 'UPDATE_SHIPMENT', payload: update });
   }, []);
-
-  // Initialize socket connection and listeners
-  // useEffect(() => {
-  //   SocketService.connect();
-
-  //   if (isAdmin) {
-  //     SocketService.emit('join-admin');
-  //   } else {
-  //     SocketService.emit('join-general');
-  //   }
-
-  //   SocketService.onNewMessage(handleNewMessage);
-  //   SocketService.on('tracking-updated', handleTrackingUpdate);
-
-  //   // For admin: listen for new chat connections
-  //   if (isAdmin) {
-  //     SocketService.on('new-chat-started', (chatInfo) => {
-  //       dispatch({
-  //         type: 'ADD_ACTIVE_CHAT',
-  //         payload: {
-  //           id: chatInfo.room,
-  //           name:
-  //             chatInfo.username || chatInfo.trackingNumber || 'General Chat',
-  //           isGeneral: chatInfo.isGeneral,
-  //           unread: true,
-  //         },
-  //       });
-  //     });
-  //   }
-
-  //   return () => {
-  //     // SocketService.offMessageReceived();
-  //     // SocketService.offTrackingUpdated();
-  //     SocketService.offNewMessage(handleNewMessage);
-  //     SocketService.off('tracking-updated', handleTrackingUpdate);
-  //     if (isAdmin) {
-  //       SocketService.off('new-chat-started');
-  //     }
-  //     SocketService.disconnect();
-  //   };
-  // }, [isAdmin, handleNewMessage, handleTrackingUpdate]);
 
   useEffect(() => {
     SocketService.connect(undefined, () => {
@@ -252,6 +225,16 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
     }
   };
 
+  const deleteShipment = async (trackingNumber) => {
+    // console.log(trackingNumber);
+    try {
+      await shipmentsAPI.delete(trackingNumber);
+      dispatch({ type: 'DELETE_SHIPMENT', payload: trackingNumber });
+    } catch (err) {
+      console.error('Error deleting shipment:', err);
+    }
+  };
+
   // 🔹 Admin fetch all chats
   const getAllChats = async () => {
     try {
@@ -285,6 +268,15 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: err.message });
       return [];
+    }
+  };
+
+  const deleteMessage = async (messageId) => {
+    try {
+      await chatAPI.deleteMessage(messageId);
+      dispatch({ type: 'DELETE_MESSAGE', payload: messageId });
+    } catch (err) {
+      console.error('Error deleting message:', err);
     }
   };
 
@@ -346,6 +338,8 @@ export const ShipmentProvider = ({ children, isAdmin = false }) => {
     sendChatMessage,
     markChatAsRead,
     getAllChats,
+    deleteShipment,
+    deleteMessage,
     chatMessages: state.chatMessages,
     shipments: state.shipments,
     isAdmin,

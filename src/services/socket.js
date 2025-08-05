@@ -8,36 +8,9 @@ class SocketService {
 
   connect(
     serverUrl = 'https://nexusserver-laum.onrender.com',
+    // serverUrl = 'http://localhost:3000',
     onConnected = null
   ) {
-    // if (!this.socket || this.isManuallyDisconnected) {
-    //   this.socket = io(serverUrl, {
-    //     withCredentials: true,
-    //     autoConnect: true,
-    //     transports: ['websocket'],
-    //   });
-
-    //   this.isManuallyDisconnected = false;
-
-    //   this.socket.on('connect', () => {
-    //     this.isConnected = true;
-    //     console.log('✅ Socket connected:', this.socket.id);
-    //     if (onConnected) onConnected();
-    //   });
-
-    //   this.socket.on('disconnect', (reason) => {
-    //     console.warn('❌ Socket disconnected:', reason);
-    //     if (!this.isManuallyDisconnected && reason !== 'io client disconnect') {
-    //       console.log('🔁 Reconnecting...');
-    //       setTimeout(() => this.connect(serverUrl), 3000);
-    //     }
-    //   });
-
-    //   this.socket.on('connect_error', (err) => {
-    //     console.error('⚠️ Socket error:', err.message);
-    //   });
-    // }
-
     // 🛡️ Prevent reconnection if already connected
     if (this.socket?.connected) {
       console.log('ℹ️ Socket already connected:', this.socket.id);
@@ -47,7 +20,6 @@ class SocketService {
 
     // 🔁 If socket exists but is not connected (e.g., reconnecting), do nothing
     if (this.socket && !this.isManuallyDisconnected) {
-      // console.log('⏳ Socket is reconnecting...');
       return;
     }
 
@@ -62,7 +34,6 @@ class SocketService {
 
     this.socket.on('connect', () => {
       this.isConnected = true;
-      // console.log('✅ Socket connected:', this.socket.id);
       if (onConnected) onConnected();
     });
 
@@ -70,7 +41,6 @@ class SocketService {
       this.isConnected = false;
       console.warn('❌ Socket disconnected:', reason);
       if (!this.isManuallyDisconnected && reason !== 'io client disconnect') {
-        // console.log('🔁 Reconnecting...');
         setTimeout(() => this.connect(serverUrl, onConnected), 3000);
       }
     });
@@ -85,7 +55,6 @@ class SocketService {
       this.isManuallyDisconnected = true;
       this.socket.disconnect();
       this.socket = null;
-      // console.log('🛑 Socket manually disconnected');
     }
   }
 
@@ -126,13 +95,25 @@ class SocketService {
   }
 
   // ✅ MESSAGING
-  sendMessage({ room, sender, content, username, isAdmin }) {
+  sendMessage({ room, sender, content, username, isAdmin, recipientRoom }) {
     this.emit('send-chat-message', {
       room,
       sender,
       message: content,
       username,
       isAdmin,
+      recipientRoom,
+    });
+  }
+
+  // ✅ ADMIN REPLY TO USER
+  sendAdminReply({ username, content, adminName, adminId }) {
+    this.emit('admin-reply', {
+      username,
+      message: content,
+      adminName,
+      adminId,
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -151,6 +132,22 @@ class SocketService {
 
   offAdminMessage(callback) {
     this.off('admin-message', callback);
+  }
+
+  onUserMessage(callback) {
+    this.on('user-message', callback);
+  }
+
+  offUserMessage(callback) {
+    this.off('user-message', callback);
+  }
+
+  onNewChatNotification(callback) {
+    this.on('new-chat', callback);
+  }
+
+  offNewChatNotification(callback) {
+    this.off('new-chat', callback);
   }
 
   onError(callback) {
