@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Truck, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../context/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import logoImage from '../assets/logo.jpg';
+// import Logo from '../../src/assets/logo';
 
 const Header = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -38,7 +40,7 @@ const Header = () => {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white shadow-md border-b border-gray-300 py-1'
+          ? 'bg-gray-50 shadow-md border-b border-gray-300 py-1'
           : 'bg-white shadow-md border-b '
       }`}
     >
@@ -50,12 +52,23 @@ const Header = () => {
             className='flex items-center space-x-3'
             onClick={closeMenu}
           >
-            <div className='bg-gray-800 p-2 rounded-lg'>
-              <Truck className='w-8 h-8 text-white' />
+            <div className='p-1 bg-white border border-gray-900 rounded-lg shadow-sm hover:shadow-md transition-shadow'>
+              <img
+                src={logoImage}
+                alt='logo'
+                // className='rounded-xl shadow-lg w-full'
+                className='w-12 h-12 object-contain'
+                // className='w-10 h-10 object-contain mr-2'
+              />
+              {/* <Truck className='w-8 h-8 text-white' /> */}
             </div>
             <div>
-              <h1 className='text-2xl font-bold text-gray-800'>NexusExpress</h1>
-              <p className='text-sm text-gray-600'>Global Logistics Platform</p>
+              <h1 className='text-2xl font-bold text-gray-800'>
+                Nexus Express
+              </h1>
+              <p className='text-sm text-gray-600'>
+                Your package, Our priority
+              </p>
             </div>
           </Link>
 
